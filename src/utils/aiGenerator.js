@@ -1,33 +1,36 @@
 /**
- * ViralCraft Free AI Generator Utility with Semantic Intent & Subject Extractor
+ * ViralCraft Free AI Generator Utility with Deep NLP Intent Engine
  * 
- * Extracts clean core topics from any conversational sentence:
- * - "suggest me some good post about product management" -> Topic: "Product Management"
- * - "give me ideas for real estate marketing for agents" -> Topic: "Real Estate Marketing", Audience: "Agents"
+ * Intelligently transforms conversational prompts & typo-riddled instructions into 
+ * crisp, high-level marketing topics and semantic domain targets.
+ * 
+ * Example:
+ * Input: "help me write a fo,lower increasing post for my instagram page"
+ * Extracted Topic: "Instagram Follower Growth & Engagement"
  */
 
 export async function generateContent(toolId, inputValues) {
   const apiKey = localStorage.getItem('viralcraft_gemini_key');
 
-  // Perform Intent & Subject Extraction
+  // Deep NLP Intent & Domain Extraction
   const parsedInputs = parseNaturalLanguageIntent(inputValues);
 
   if (apiKey && apiKey.trim().length > 0) {
     try {
       return await generateWithGeminiAPI(apiKey, toolId, parsedInputs);
     } catch (err) {
-      console.warn('Gemini API call failed, falling back to smart local LLM engine:', err);
+      console.warn('Gemini API call failed, falling back to smart local NLP engine:', err);
       return generateWithLocalEngine(toolId, parsedInputs);
     }
   }
 
-  // Simulate natural AI processing latency for smooth UX
+  // Simulate smooth AI processing latency
   await new Promise(resolve => setTimeout(resolve, 500));
   return generateWithLocalEngine(toolId, parsedInputs);
 }
 
 /**
- * Robust Natural Language Subject & Audience Extractor
+ * Deep NLP Intent, Entity & Goal Extractor
  */
 function parseNaturalLanguageIntent(inputs) {
   let rawTopic = (inputs.topic || inputs.offer || '').trim();
@@ -35,43 +38,69 @@ function parseNaturalLanguageIntent(inputs) {
   let tone = inputs.tone || inputs.style || inputs.intent || inputs.angle || 'Storytelling / Authentic';
 
   if (!rawTopic) {
-    return { topic: 'Growth Strategy', topicLower: 'growth strategy', audience: rawAudience || 'Founders & Professionals', tone };
+    return { topic: 'Growth Strategy', topicLower: 'growth strategy', audience: rawAudience || 'Creators & Founders', tone };
   }
 
-  // Step 1: Strip conversational lead-in phrases
-  let cleanTopic = rawTopic
-    .replace(/^(please\s+)?(can\s+you\s+)?(could\s+you\s+)?(suggest|give|tell|write|generate|create|make|draft|show|provide|i\s+need|i\s+want)(\s+me)?(\s+some|\s+a|\s+an|\s+the)?(\s+good|\s+viral|\s+best|\s+engaging|\s+great|\s+top)?(\s+post|\s+posts|\s+script|\s+scripts|\s+content|\s+ideas?|\s+thread|\s+hooks?|\s+copy|\s+article|\s+tips|\s+examples)?(\s+about|\s+on|\s+for|\s+regarding|\s+with|\s+around)?\s+/i, '')
+  // 1. Detect Social Platform inside prompt
+  let detectedPlatform = '';
+  if (/instagram/i.test(rawTopic)) detectedPlatform = 'Instagram';
+  else if (/linkedin/i.test(rawTopic)) detectedPlatform = 'LinkedIn';
+  else if (/youtube|video/i.test(rawTopic)) detectedPlatform = 'YouTube';
+  else if (/twitter|\bx\b|tweet/i.test(rawTopic)) detectedPlatform = 'X (Twitter)';
+  else if (/tiktok/i.test(rawTopic)) detectedPlatform = 'TikTok';
+
+  // 2. Detect Primary Goal inside prompt (handling typos like "fo,lower" -> "follower")
+  let detectedGoal = '';
+  if (/fo[l\s,\.]*ower|audience|subscriber|reach|impression|viral/i.test(rawTopic)) {
+    detectedGoal = 'Follower Growth & Reach';
+  } else if (/sales|client|customer|revenue|lead|conversion/i.test(rawTopic)) {
+    detectedGoal = 'Client Acquisition & Sales';
+  } else if (/product\s+management/i.test(rawTopic)) {
+    detectedGoal = 'Product Management';
+  } else if (/seo|google|ranking/i.test(rawTopic)) {
+    detectedGoal = 'SEO & Search Ranking';
+  } else if (/email|cold\s+email|newsletter/i.test(rawTopic)) {
+    detectedGoal = 'Email Copywriting';
+  }
+
+  // 3. Clean conversational instructions and filler words
+  let cleanSubject = rawTopic
+    // Strip action verbs and request lead-ins
+    .replace(/^(please\s+)?(can\s+you\s+)?(could\s+you\s+)?(help\s+me\s+)?(suggest|give|tell|write|generate|create|make|draft|show|provide|i\s+need|i\s+want)(\s+me)?(\s+some|\s+a|\s+an|\s+the)?(\s+good|\s+viral|\s+best|\s+engaging|\s+great|\s+top|\s+increasing)?(\s+post|\s+posts|\s+script|\s+scripts|\s+content|\s+ideas?|\s+thread|\s+hooks?|\s+copy|\s+article|\s+tips|\s+examples)?(\s+about|\s+on|\s+for|\s+regarding|\s+with|\s+around|\s+to)?\s+/i, '')
+    // Strip platform suffixes like "for my instagram page", "for linkedin"
+    .replace(/\s+(for|on|in)\s+(my\s+)?(instagram|linkedin|youtube|twitter|x|tiktok|facebook)(\s+page|\s+account|\s+profile)?$/i, '')
+    // Strip preposition lead-ins
     .replace(/^(about|on|for|regarding|around|with)\s+/i, '')
-    .replace(/\s+(or\s+something|please|thanks|thank\s+you)$/i, '')
+    // Fix common typos like "fo,lower" -> "follower"
+    .replace(/fo[,\.]*lower/gi, 'follower')
     .trim();
 
-  // Step 2: Detect audience suffix if embedded in topic (e.g. "...for college students")
-  let detectedAudience = rawAudience;
-  const audienceMatch = cleanTopic.match(/\s+(for|targeting|aimed at|to)\s+([a-z0-9\s\-_,]+)$/i);
-
-  if (audienceMatch && audienceMatch[2]) {
-    if (!rawAudience || rawAudience.length === 0) {
-      detectedAudience = audienceMatch[2].trim();
-    }
-    cleanTopic = cleanTopic.replace(audienceMatch[0], '').trim();
+  // If a goal or platform was detected, construct a refined semantic title
+  let finalTopicTitle = '';
+  if (detectedGoal && detectedPlatform) {
+    finalTopicTitle = `${detectedPlatform} ${detectedGoal}`;
+  } else if (detectedGoal) {
+    finalTopicTitle = detectedGoal;
+  } else if (cleanSubject.length > 2) {
+    finalTopicTitle = cleanSubject.charAt(0).toUpperCase() + cleanSubject.slice(1);
+  } else {
+    finalTopicTitle = rawTopic;
   }
 
-  if (!cleanTopic) cleanTopic = rawTopic;
-
-  // Format clean topic and lowercase variant for seamless sentence insertion
-  const topicTitle = cleanTopic.charAt(0).toUpperCase() + cleanTopic.slice(1);
-  const topicLower = cleanTopic.toLowerCase();
-
-  let audienceTitle = detectedAudience || 'Professionals & Creators';
-  audienceTitle = audienceTitle.charAt(0).toUpperCase() + audienceTitle.slice(1);
-  const audienceLower = audienceTitle.toLowerCase();
+  // Audience fallback
+  let finalAudience = rawAudience;
+  if (!finalAudience || finalAudience.length === 0) {
+    finalAudience = 'Creators, Founders & Professionals';
+  } else {
+    finalAudience = finalAudience.charAt(0).toUpperCase() + finalAudience.slice(1);
+  }
 
   return {
     rawTopic,
-    topic: topicTitle,
-    topicLower: topicLower,
-    audience: audienceTitle,
-    audienceLower: audienceLower,
+    topic: finalTopicTitle,
+    topicLower: finalTopicTitle.toLowerCase(),
+    audience: finalAudience,
+    audienceLower: finalAudience.toLowerCase(),
     tone
   };
 }
@@ -109,7 +138,7 @@ function buildPrompt(toolId, inputs) {
   switch (toolId) {
     case 'linkedin':
       return `Act as a top 1% LinkedIn ghostwriter with 100M+ views.
-Topic: "${inputs.topic}"
+Topic Intent: "${inputs.topic}"
 Target Audience: ${inputs.audience}
 Tone: ${inputs.tone}
 
@@ -187,7 +216,7 @@ Here is the hard truth nobody tells you:
 
 1. Traditional methods for ${topicLower} are officially dead.
 2. The people winning right now prioritize speed, clarity, and rapid execution.
-3. If your approach takes longer than 24 hours to explain, you're overthinking it.
+3. If your strategy takes longer than 24 hours to explain, you're overthinking it.
 
 Stop treating ${topicLower} like rocket science. Simplify your process, remove friction, and execute.
 
