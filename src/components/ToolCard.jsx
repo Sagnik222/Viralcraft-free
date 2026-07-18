@@ -79,17 +79,17 @@ export function ToolCard({ tool, onShowToast }) {
           <form onSubmit={handleGenerate} className="lg:col-span-5 space-y-5">
             {tool.inputs.map((field) => (
               <div key={field.id} className="space-y-1.5">
-                <label className="block text-xs font-semibold text-slate-300">
+                <label className="block text-xs font-bold text-white tracking-wide">
                   {field.label}
                 </label>
                 {field.type === 'select' ? (
                   <select
                     value={inputs[field.id] || field.options[0]}
                     onChange={(e) => handleInputChange(field.id, e.target.value)}
-                    className="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
+                    className="form-input w-full rounded-xl px-3.5 py-2.5 text-sm font-semibold focus:outline-none transition-all shadow-md"
                   >
                     {field.options.map(opt => (
-                      <option key={opt} value={opt} className="bg-slate-900 text-slate-200">{opt}</option>
+                      <option key={opt} value={opt} className="bg-white text-slate-900 font-medium">{opt}</option>
                     ))}
                   </select>
                 ) : (
@@ -98,7 +98,7 @@ export function ToolCard({ tool, onShowToast }) {
                     value={inputs[field.id] || ''}
                     onChange={(e) => handleInputChange(field.id, e.target.value)}
                     placeholder={field.placeholder}
-                    className="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
+                    className="form-input w-full rounded-xl px-3.5 py-2.5 text-sm font-semibold focus:outline-none transition-all shadow-md"
                   />
                 )}
               </div>
@@ -107,7 +107,7 @@ export function ToolCard({ tool, onShowToast }) {
             <button
               type="submit"
               disabled={loading}
-              className="w-full btn-primary flex items-center justify-center gap-2 py-3 text-sm font-bold shadow-xl disabled:opacity-50"
+              className="w-full btn-primary flex items-center justify-center gap-2 py-3.5 text-sm font-extrabold shadow-xl disabled:opacity-50"
             >
               {loading ? (
                 <>
@@ -146,7 +146,7 @@ export function ToolCard({ tool, onShowToast }) {
                   </div>
 
                   {/* Result Content Box */}
-                  <div className="relative bg-slate-950/80 border border-slate-800 rounded-xl p-5 min-h-[260px] text-slate-200 text-sm font-sans whitespace-pre-wrap leading-relaxed">
+                  <div className="relative bg-slate-950/80 border border-slate-800 rounded-xl p-5 min-h-[260px] text-slate-200 text-sm font-sans whitespace-pre-wrap leading-relaxed shadow-inner">
                     {results[activeTab]?.content}
                   </div>
 

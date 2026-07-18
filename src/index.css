@@ -43,6 +43,24 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
 }
 
+/* Form Inputs & Selects - High Contrast Black Text */
+.form-input {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid #cbd5e1 !important;
+  font-weight: 600 !important;
+}
+
+.form-input::placeholder {
+  color: #475569 !important;
+  font-weight: 500 !important;
+}
+
+.form-input:focus {
+  border-color: #a855f7 !important;
+  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.3) !important;
+}
+
 /* Gradient Text */
 .gradient-text {
   background: linear-gradient(135deg, #38bdf8 0%, #a855f7 50%, #f43f5e 100%);
