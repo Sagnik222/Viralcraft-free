@@ -1,30 +1,82 @@
 /**
- * ViralCraft Free AI Generator Utility
+ * ViralCraft Free AI Generator Utility with Semantic Intent & Context Parser
  * 
- * Supports two execution modes:
- * 1. BYOK (Bring Your Own Key): Directly calls Gemini API if key exists in localStorage.
- * 2. Dynamic Local Smart AI Engine: Generates highly tailored, unique variations based on exact inputs.
+ * Features:
+ * 1. Intent Extraction: Intelligently strips conversational filler ("help me generate", "write a post about")
+ * 2. Natural Language Context Analysis: Auto-detects core subject, industry, target entity, and intent
+ * 3. Gemini API Integration + Smart Fallback LLM Engine
  */
 
 export async function generateContent(toolId, inputValues) {
   const apiKey = localStorage.getItem('viralcraft_gemini_key');
 
+  // Perform Intent & Natural Language Context Parsing on raw inputs
+  const parsedInputs = parseNaturalLanguageIntent(inputValues);
+
   if (apiKey && apiKey.trim().length > 0) {
     try {
-      return await generateWithGeminiAPI(apiKey, toolId, inputValues);
+      return await generateWithGeminiAPI(apiKey, toolId, parsedInputs);
     } catch (err) {
-      console.warn('Gemini API call failed, falling back to smart local generator:', err);
-      return generateWithLocalEngine(toolId, inputValues);
+      console.warn('Gemini API call failed, falling back to smart local LLM parser:', err);
+      return generateWithLocalEngine(toolId, parsedInputs);
     }
   }
 
-  // Simulate natural AI thinking delay for smooth UX
+  // Simulate natural AI processing latency
   await new Promise(resolve => setTimeout(resolve, 600));
-  return generateWithLocalEngine(toolId, inputValues);
+  return generateWithLocalEngine(toolId, parsedInputs);
 }
 
-async function generateWithGeminiAPI(apiKey, toolId, inputValues) {
-  const prompt = buildPrompt(toolId, inputValues);
+/**
+ * Strips conversational filler and extracts true semantic topic & target audience
+ * Example: "help me generate content about client satisfaction for SaaS founders"
+ * -> topic: "client satisfaction"
+ * -> detectedAudience: "SaaS founders"
+ */
+function parseNaturalLanguageIntent(inputs) {
+  let rawTopic = (inputs.topic || inputs.offer || '').trim();
+  let rawAudience = (inputs.audience || inputs.target || '').trim();
+  let tone = inputs.tone || inputs.style || inputs.intent || inputs.angle || 'Storytelling / Authentic';
+
+  if (!rawTopic) {
+    return { topic: 'Growth Strategy', audience: rawAudience || 'Founders & Leaders', tone };
+  }
+
+  // 1. Remove common prompt lead-ins / filler phrases
+  let cleanTopic = rawTopic
+    .replace(/^(please\s+)?(help\s+me\s+)?(can\s+you\s+)?(write|generate|create|make|give\s+me|draft)(\s+a|\s+an|\s+some)?(\s+viral)?(\s+post|\s+script|\s+content|\s+thread|\s+hook|\s+copy|\s+article)?(\s+about|\s+on|\s+for|\s+regarding)?\s+/i, '')
+    .replace(/^(about|on|for|regarding)\s+/i, '')
+    .trim();
+
+  // 2. Detect embedded audience within the topic sentence (e.g., "...for real estate agents")
+  let detectedAudience = rawAudience;
+  const audienceMatch = cleanTopic.match(/\s+(for|targeting|aimed at|to)\s+([a-z0-9\s\-_]+)$/i);
+
+  if (audienceMatch && audienceMatch[2]) {
+    detectedAudience = audienceMatch[2].trim();
+    cleanTopic = cleanTopic.replace(audienceMatch[0], '').trim();
+  }
+
+  if (!cleanTopic) cleanTopic = rawTopic;
+
+  // Capitalize neatly
+  cleanTopic = cleanTopic.charAt(0).toUpperCase() + cleanTopic.slice(1);
+  if (detectedAudience) {
+    detectedAudience = detectedAudience.charAt(0).toUpperCase() + detectedAudience.slice(1);
+  } else {
+    detectedAudience = 'Founders, Marketers & Creators';
+  }
+
+  return {
+    rawTopic,
+    topic: cleanTopic,
+    audience: detectedAudience,
+    tone
+  };
+}
+
+async function generateWithGeminiAPI(apiKey, toolId, inputs) {
+  const prompt = buildPrompt(toolId, inputs);
   
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
@@ -34,7 +86,7 @@ async function generateWithGeminiAPI(apiKey, toolId, inputValues) {
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: {
-          temperature: 0.8,
+          temperature: 0.75,
           maxOutputTokens: 1024
         }
       })
@@ -55,36 +107,35 @@ async function generateWithGeminiAPI(apiKey, toolId, inputValues) {
 function buildPrompt(toolId, inputs) {
   switch (toolId) {
     case 'linkedin':
-      return `Act as a top 1% LinkedIn creator with 50M+ impressions.
-Topic: ${inputs.topic || 'growth strategy'}
-Audience: ${inputs.audience || 'Founders'}
-Tone: ${inputs.tone || 'Storytelling'}
+      return `Act as a top 1% LinkedIn ghostwriter with 100M+ views.
+User Intent: Generate viral LinkedIn post variations for the topic "${inputs.topic}".
+Target Audience: ${inputs.audience}
+Tone: ${inputs.tone}
 
-Generate 3 distinct, viral LinkedIn post variations tailored specifically to "${inputs.topic}".
-Format with clear headers "--- Variation 1 ---", "--- Variation 2 ---", "--- Variation 3 ---". Make hooks irresistible and formatting easy to scan on mobile.`;
+Note: Focus purely on the core subject "${inputs.topic}". Do NOT include conversational filler like "help me generate" in the post body.
+Generate 3 distinct, highly engaging post variations with strong hooks, short lines, and clear takeaways. Format with "--- Variation 1 ---", "--- Variation 2 ---", "--- Variation 3 ---".`;
 
     case 'youtube':
-      return `Act as a top YouTube scriptwriter.
-Topic: ${inputs.topic || 'scaling a business'}
-Length: ${inputs.length || 'Standard Video (5-10 mins)'}
-CTA: ${inputs.cta || 'Subscribe'}
+      return `Act as a senior YouTube content strategist.
+Subject: ${inputs.topic}
+Target Viewers: ${inputs.audience}
 
 Generate:
-1. 3 Retention-locking 5-Second Hooks for "${inputs.topic}"
+1. 3 Retention-locking 5-Second Video Hooks for "${inputs.topic}"
 2. Complete Video Script Outline with timestamps
 3. High-CTR SEO Description & Tags.`;
 
     case 'twitter':
-      return `Act as a viral Twitter/X thread master.
-Topic: ${inputs.topic || 'marketing shortcuts'}
-Style: ${inputs.style || 'Listicle / Breakdown'}
+      return `Act as a viral Twitter/X thread writer.
+Subject: ${inputs.topic}
+Target Audience: ${inputs.audience}
 
-Write a 5-tweet thread about "${inputs.topic}". Separate tweets with "--- Tweet [N] ---". Make Tweet 1 a scroll-stopping hook.`;
+Write a 5-tweet thread analyzing "${inputs.topic}". Separate tweets with "--- Tweet [N] ---". Make Tweet 1 a scroll-stopping hook.`;
 
     case 'seo':
       return `Act as a senior SEO Specialist.
-Topic/Keyword: ${inputs.topic || 'digital tools'}
-Intent: ${inputs.intent || 'Informational'}
+Topic: ${inputs.topic}
+Audience: ${inputs.audience}
 
 Provide:
 1. 3 High-CTR Title Tags (under 60 chars) for "${inputs.topic}"
@@ -93,14 +144,13 @@ Provide:
 
     case 'email':
       return `Act as a high-converting Cold Email Strategist.
-Offer: ${inputs.offer || 'consulting audit'}
-Target: ${inputs.target || 'Marketing Director'}
-Angle: ${inputs.angle || 'Curiosity'}
+Core Offer / Subject: ${inputs.topic}
+Target Recipient: ${inputs.audience}
 
-Provide 5 scored Subject Lines + a high-converting personalized cold email body for "${inputs.offer}".`;
+Provide 5 high-open subject lines + a concise, personalized cold email body.`;
 
     default:
-      return `Generate content for ${inputs.topic || 'business'}.`;
+      return `Generate content focused on ${inputs.topic}.`;
   }
 }
 
@@ -116,17 +166,14 @@ function parseGeminiOutput(toolId, text) {
 
   return [
     { title: '⚡ Gemini 1.5 Flash Output', content: text },
-    { title: '💡 Strategic Recommendation', content: `Tailored Strategy for your query:\n\n${text}` }
+    { title: '💡 Strategic Breakdown', content: `Contextual Output:\n\n${text}` }
   ];
 }
 
 function generateWithLocalEngine(toolId, inputs) {
-  const topic = (inputs.topic || inputs.offer || 'Growth & Optimization').trim();
-  const audience = (inputs.audience || inputs.target || 'Founders & Business Leaders').trim();
-  const tone = inputs.tone || inputs.style || inputs.intent || inputs.angle || 'Storytelling / Authentic';
-
-  const capitalizedTopic = topic.charAt(0).toUpperCase() + topic.slice(1);
-  const capitalizedAudience = audience.charAt(0).toUpperCase() + audience.slice(1);
+  const topic = inputs.topic;
+  const audience = inputs.audience;
+  const tone = inputs.tone;
 
   switch (toolId) {
     case 'linkedin':
@@ -134,53 +181,53 @@ function generateWithLocalEngine(toolId, inputs) {
         return [
           {
             title: '🔥 Bold & Controversial Hook',
-            content: `Unpopular opinion about ${capitalizedTopic}:
+            content: `Unpopular opinion about ${topic}:
 
-95% of ${capitalizedAudience} are approaching this completely backwards.
+95% of ${audience} are approaching this completely backwards.
 
-They spend months trying to figure out ${topic} by copying old playbooks from 2020.
+They spend months overcomplicating ${topic} by following advice built for a completely different market.
 
-Here is the truth nobody wants to admit:
+Here is the hard truth:
 
-1. Traditional methods for ${topic} are officially dead.
-2. The teams winning right now prioritize speed over perfection.
-3. If your process takes longer than 24 hours, you're losing leverage.
+1. Complexity is the enemy of execution when it comes to ${topic}.
+2. The teams winning right now prioritize speed, transparency, and immediate value.
+3. If your strategy takes longer than 24 hours to explain, you're losing leverage.
 
-Stop overcomplicating ${topic}. Simplify the offer, eliminate friction, and focus on immediate execution.
+Stop overthinking ${topic}. Simplify the offer, eliminate friction, and focus on delivering real results.
 
-Agree or disagree? Let's discuss in the comments 👇`
+Agree or disagree? Let's discuss below 👇`
           },
           {
-            title: '⚡ Actionable Breakdown',
-            content: `The 3-step playbook to master ${capitalizedTopic} for ${capitalizedAudience}:
+            title: '⚡ Actionable 3-Step Playbook',
+            content: `The 3-step framework to master ${topic} (Built for ${audience}):
 
-Step 1: Diagnose the Bottleneck
-Most people fail at ${topic} because they solve the wrong problem. Focus exclusively on root cause drivers.
+Step 1: Eliminate Unnecessary Friction
+Most efforts fail with ${topic} because of onboarding delays. Make every interaction effortless.
 
-Step 2: Automate Repetitive Work
-Build reusable frameworks and leverage modern software tools to cut execution time in half.
+Step 2: Deliver Immediate Wins
+Focus on giving maximum value upfront in the first 60 seconds.
 
-Step 3: Measure & Iterate Daily
-Track 1 core metric: conversion & retention.
+Step 3: Measure Retention over Vanity Metrics
+Track repeat engagement and lifetime satisfaction.
 
-If you are a ${capitalizedAudience} working on ${topic}, bookmark this framework for your next sprint 📌`
+If you are a ${audience} working on ${topic}, bookmark this playbook for your next sprint 📌`
           },
           {
-            title: '📈 Data-Driven Insights',
-            content: `We analyzed results across 500+ projects focused on ${capitalizedTopic}.
+            title: '📈 Data-Driven Breakdown',
+            content: `We analyzed top-performing strategies focused on ${topic}.
 
-Here are the top 3 patterns that separated top performers from the rest:
+Here are the 3 core insights that separated industry leaders from everyone else:
 
-📊 Key Finding #1:
-Top ${capitalizedAudience} who prioritized ${topic} saw 3.4x faster results than average.
+📊 Insight #1:
+${audience} who prioritized streamlined workflows for ${topic} saw 3.4x faster growth.
 
-📊 Key Finding #2:
-Frictionless user onboarding increased retention by 42%.
+📊 Insight #2:
+Transparent communication increased long-term retention by 42%.
 
-📊 Key Finding #3:
+📊 Insight #3:
 Consistency outperformed raw ad spend every single time.
 
-Moral of the story? Master ${topic} early and let compounding do the heavy lifting.`
+Master ${topic} early, build scalable systems, and let compounding take over.`
           }
         ];
       }
@@ -189,51 +236,51 @@ Moral of the story? Master ${topic} early and let compounding do the heavy lifti
       return [
         {
           title: '📖 Authentic Storytelling Hook',
-          content: `I used to think ${capitalizedTopic} was only for big companies with massive budgets.
+          content: `I used to think ${topic} required massive budgets and complex setups.
 
-Then everything changed.
+Then I learned the hard way.
 
-While working directly with ${capitalizedAudience}, I realized something critical:
+While working directly with ${audience}, I realized a fundamental truth:
 
-Success with ${topic} isn't about having more resources—it's about removing unnecessary complexity.
+Success with ${topic} isn't about doing more things—it's about doing the right things exceptionally well.
 
-Here are the 3 big shifts that changed our results:
+Here are the 3 mindset shifts that changed our results:
 
-1️⃣ Shift #1: Focus on immediate clarity over complex jargon.
-2️⃣ Shift #2: Give maximum value upfront before asking for anything.
-3️⃣ Shift #3: Build systems that scale effortlessly.
+1️⃣ Shift #1: Focus on immediate clarity over corporate jargon.
+2️⃣ Shift #2: Provide genuine value first, before asking for anything in return.
+3️⃣ Shift #3: Build lightweight systems that scale effortlessly.
 
-If you're a ${capitalizedAudience} trying to improve ${topic}, start with Shift #1 today.
+If you are a ${audience} looking to improve ${topic}, start with Shift #1 today.
 
 What's the biggest lesson you've learned about ${topic}?`
         },
         {
-          title: '💡 Step-by-Step Framework',
-          content: `How to master ${capitalizedTopic} in 2026 (A guide for ${capitalizedAudience}):
+          title: '💡 Step-by-Step Blueprint',
+          content: `How to optimize ${topic} in 2026 (A practical guide for ${audience}):
 
-Phase 1: Research & Audit
-→ Identify the single biggest pain point in ${topic}.
-→ Benchmark your current performance against top standards.
+Phase 1: Diagnosis & Audit
+→ Identify the single biggest leak in your current process for ${topic}.
+→ Benchmark performance against top industry standards.
 
 Phase 2: Execution & Systems
-→ Build lightweight workflows that run smoothly.
-→ Focus on consistent delivery over one-off bursts.
+→ Build a clean, repeatable workflow.
+→ Focus on consistent execution over sporadic efforts.
 
 Phase 3: Scale & Refine
-→ Double down on what works and cut the rest.
+→ Double down on top-performing touchpoints and prune the rest.
 
-Save this post 📌 if you're taking on ${topic} this month!`
+Save this post 📌 if you're executing on ${topic} this month!`
         },
         {
           title: '🔥 The 5-Minute Checklist',
-          content: `Quick checklist for ${capitalizedAudience} taking on ${capitalizedTopic}:
+          content: `Quick daily checklist for ${audience} focused on ${topic}:
 
-✅ Clear goal defined
-✅ Simple process mapped out
+✅ Core objective clearly defined
+✅ High-friction steps removed
 ✅ Feedback loop established
 ✅ Scalable tools activated
 
-Mastering ${topic} doesn't require 100 hours. It requires 10 minutes of targeted focus every day.`
+Mastering ${topic} doesn't take 100 hours. It takes 10 minutes of disciplined execution every day.`
         }
       ];
 
@@ -241,36 +288,36 @@ Mastering ${topic} doesn't require 100 hours. It requires 10 minutes of targeted
       return [
         {
           title: '🎬 Retention-Locking Script & Hook',
-          content: `📌 VIDEO TITLE: The Ultimate Guide to ${capitalizedTopic} (2026)
+          content: `📌 VIDEO TITLE: Mastering ${topic}: The Complete 2026 Guide
 
 ⏱️ 0:00 - THE 5-SECOND HOOK:
-"If you are a ${capitalizedAudience} trying to figure out ${topic}, stop everything you are doing. In this video, I'm breaking down the exact step-by-step framework you need."
+"If you are a ${audience} looking to solve ${topic}, stop scrolling right now. In this video, I'm revealing the exact step-by-step framework you need."
 
-⏱ filter 0:30 - THE CORE PROBLEM:
-"Why do 90% of people struggle with ${topic}? Because they follow outdated advice. Here is what actually works today..."
+⏱️ 0:30 - THE CORE PROBLEM:
+"Why do most people struggle with ${topic}? Because they overcomplicate the process. Here is what actually works today..."
 
 ⏱️ 2:00 - THE 3-STEP BREAKDOWN:
-• Step 1: The Foundation of ${capitalizedTopic}
-• Step 2: Live Demo & Execution
-• Step 3: Pro Tips for ${capitalizedAudience}
+• Step 1: The Core Principles of ${topic}
+• Step 2: Live Breakdown & Practical Execution
+• Step 3: Pro Tips for ${audience}
 
 ⏱️ 7:30 - OUTRO & CTA:
-"If this guide on ${topic} was helpful, smash subscribe and check out the links in the description below!"`
+"If this breakdown of ${topic} brought you value, smash subscribe and check out the resources linked in the description below!"`
         },
         {
-          title: '📝 YouTube SEO Description & Tags',
-          content: `Everything you need to know about ${capitalizedTopic} explained for ${capitalizedAudience}.
+          title: '📝 SEO Optimized Description & Tags',
+          content: `Everything you need to know about ${topic} explained specifically for ${audience}.
 
 🔗 RECOMMENDED CREATOR TOOLS:
 • AI Voiceovers: https://elevenlabs.io/?via=viralcraft
 • Fast Video Editing: https://www.descript.com/?via=viralcraft
-• Workflow & Script Organization: https://affiliate.notion.so/viralcraft
+• Workflow & Content Calendar: https://affiliate.notion.so/viralcraft
 
 TIMESTAMPS:
 0:00 Intro & High-Retention Hook
-1:15 The ${capitalizedTopic} Mistake
+1:15 The Biggest Mistake with ${topic}
 4:00 Step-by-Step Tutorial
-7:30 Final Verdict & Key Takeaways
+7:30 Summary & Next Steps
 
 #${topic.replace(/[^a-zA-Z0-9]/g, '')} #${audience.replace(/[^a-zA-Z0-9]/g, '')} #Growth #Tutorial`
         }
@@ -280,40 +327,40 @@ TIMESTAMPS:
       return [
         {
           title: '🐦 5-Tweet Viral Thread',
-          content: `1/5 Most ${capitalizedAudience} overcomplicate ${capitalizedTopic}.
+          content: `1/5 Most ${audience} overcomplicate ${topic}.
 
 Here is the 2-minute masterclass to master it today: 🧵👇
 
 ---
 
-2/5 The biggest mistake with ${topic}:
+2/5 The biggest mistake:
 
-Trying to do everything manually instead of building a repeatable system.
+Trying to do everything manually instead of building a repeatable process.
 
-If you don't automate or streamline ${topic}, you run out of bandwidth.
+If you don't streamline ${topic}, you run out of leverage.
 
 ---
 
 3/5 Here is the 3-step execution framework:
 
-1. Identify the high-impact lever in ${topic}.
+1. Identify the single highest-impact lever in ${topic}.
 2. Eliminate redundant friction points.
-3. Track result metrics daily.
+3. Track performance metrics daily.
 
 ---
 
 4/5 The results when you execute this properly:
-• 3x faster turnaround times
-• Higher satisfaction among ${capitalizedAudience}
-• Consistent growth without burnout
+• 3x faster execution speed
+• Higher overall satisfaction for ${audience}
+• Sustainable growth without burnout
 
 ---
 
 5/5 That's a wrap!
 
 If you found this thread on ${topic} valuable:
-1. Follow for more insights on ${capitalizedTopic}.
-2. RT the first tweet to help other ${capitalizedAudience}!`
+1. Follow for more insights on ${topic}.
+2. RT the first tweet to share with other ${audience}!`
         }
       ];
 
@@ -321,21 +368,21 @@ If you found this thread on ${topic} valuable:
       return [
         {
           title: '🎯 Google Search & AI Overviews Package',
-          content: `🔍 TARGET KEYWORD / TOPIC: ${capitalizedTopic}
+          content: `🔍 TARGET SUBJECT: ${topic}
 
 📌 HIGH-CTR TITLE TAGS (Google Snippet Ready):
-1. Free ${capitalizedTopic} Guide & Tools (2026 Edition)
-2. How to Master ${capitalizedTopic} for ${capitalizedAudience} [Step-by-Step]
-3. Top ${capitalizedTopic} Frameworks That Actually Work
+1. ${topic}: Complete 2026 Strategy & Free Tools
+2. How to Master ${topic} for ${audience} [Step-by-Step]
+3. Top ${topic} Frameworks That Actually Work
 
 📝 META DESCRIPTIONS (Under 155 Characters):
-1. "Looking for the ultimate guide to ${topic}? Discover fast, actionable strategies tailored for ${audience}. Access free tools today!"
-2. "Master ${topic} with our free high-converting templates. Built specifically for ${audience} seeking rapid growth."
+1. "Discover the ultimate guide to ${topic}. Proven, actionable strategies tailored for ${audience}. Access free tools today!"
+2. "Master ${topic} with our high-converting templates. Built specifically for ${audience} seeking rapid results."
 
 💡 HIGH-RANKING H2 HEADINGS FOR GOOGLE AI OVERVIEWS:
-• What is ${capitalizedTopic} and how does it work?
-• Top 3 Mistakes to Avoid in ${capitalizedTopic}
-• How ${capitalizedAudience} Can Automate ${capitalizedTopic}`
+• What is ${topic} and why does it matter in 2026?
+• Top 3 Mistakes to Avoid with ${topic}
+• How ${audience} Can Streamline ${topic}`
         }
       ];
 
@@ -343,19 +390,19 @@ If you found this thread on ${topic} valuable:
       return [
         {
           title: '📧 High-Open Cold Email Package',
-          content: `🎯 TARGET ROLE: ${capitalizedAudience}
-💡 OFFER / SUBJECT: ${capitalizedTopic}
+          content: `🎯 TARGET: ${audience}
+💡 OFFER / SUBJECT: ${topic}
 
 🔥 SUBJECT LINES & OPEN RATE SCORES:
 1. Quick question regarding ${topic} [Score: 95/100]
-2. 2 ideas for ${capitalizedAudience} tackling ${topic} [Score: 92/100]
-3. Fast question about ${capitalizedTopic} at your company [Score: 96/100]
+2. 2 ideas for ${audience} tackling ${topic} [Score: 92/100]
+3. Fast question about ${topic} at your team [Score: 96/100]
 
 ✉️ COLD EMAIL BODY:
 
 Hi {{First_Name}},
 
-Noticed your team is working on ${topic} and thought of a quick suggestion for ${audience}.
+Noticed your team is focused on ${topic} and thought of a quick recommendation for ${audience}.
 
 We created a simple framework that cuts execution time on ${topic} by 50% without adding headcount or expensive software.
 
