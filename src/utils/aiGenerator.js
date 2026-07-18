@@ -3,7 +3,7 @@
  * 
  * Supports two execution modes:
  * 1. BYOK (Bring Your Own Key): Directly calls Gemini API if key exists in localStorage.
- * 2. Instant Local Smart AI Engine: Generates tailored, viral marketing structures client-side instantly.
+ * 2. Dynamic Local Smart AI Engine: Generates highly tailored, unique variations based on exact inputs.
  */
 
 export async function generateContent(toolId, inputValues) {
@@ -14,14 +14,12 @@ export async function generateContent(toolId, inputValues) {
       return await generateWithGeminiAPI(apiKey, toolId, inputValues);
     } catch (err) {
       console.warn('Gemini API call failed, falling back to smart local generator:', err);
-      // Fallback to local engine on API error
       return generateWithLocalEngine(toolId, inputValues);
     }
   }
 
-  // Default to intelligent local generation engine (Instant & 100% Free)
-  // Simulate natural typing delay for smooth UX
-  await new Promise(resolve => setTimeout(resolve, 800));
+  // Simulate natural AI thinking delay for smooth UX
+  await new Promise(resolve => setTimeout(resolve, 600));
   return generateWithLocalEngine(toolId, inputValues);
 }
 
@@ -36,7 +34,7 @@ async function generateWithGeminiAPI(apiKey, toolId, inputValues) {
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: {
-          temperature: 0.7,
+          temperature: 0.8,
           maxOutputTokens: 1024
         }
       })
@@ -57,155 +55,224 @@ async function generateWithGeminiAPI(apiKey, toolId, inputValues) {
 function buildPrompt(toolId, inputs) {
   switch (toolId) {
     case 'linkedin':
-      return `Act as a world-class LinkedIn ghostwriter with 100M+ views.
-Topic: ${inputs.topic || 'Building in public'}
-Audience: ${inputs.audience || 'Founders & Marketers'}
+      return `Act as a top 1% LinkedIn creator with 50M+ impressions.
+Topic: ${inputs.topic || 'growth strategy'}
+Audience: ${inputs.audience || 'Founders'}
 Tone: ${inputs.tone || 'Storytelling'}
 
-Generate 3 distinct, viral LinkedIn post variations with high-converting hooks.
-Format output into clear sections marked with "--- Variation 1 ---", "--- Variation 2 ---", "--- Variation 3 ---". Use short punchy lines, line breaks, and clear takeaways.`;
+Generate 3 distinct, viral LinkedIn post variations tailored specifically to "${inputs.topic}".
+Format with clear headers "--- Variation 1 ---", "--- Variation 2 ---", "--- Variation 3 ---". Make hooks irresistible and formatting easy to scan on mobile.`;
 
     case 'youtube':
-      return `Act as a top YouTube creator strategist.
-Video Title/Topic: ${inputs.topic || 'AI Tools'}
+      return `Act as a top YouTube scriptwriter.
+Topic: ${inputs.topic || 'scaling a business'}
 Length: ${inputs.length || 'Standard Video (5-10 mins)'}
 CTA: ${inputs.cta || 'Subscribe'}
 
-Generate a structured video outline including:
-1. 3 Killer 5-Second Hooks
-2. Story Arc & Timestamps (0:00 - Intro, 1:30 - Core Value, 5:00 - The Secret Hack, 7:30 - CTA)
-3. Full Video Description with timestamps & keywords for YouTube SEO.`;
+Generate:
+1. 3 Retention-locking 5-Second Hooks for "${inputs.topic}"
+2. Complete Video Script Outline with timestamps
+3. High-CTR SEO Description & Tags.`;
 
     case 'twitter':
-      return `Act as a viral Twitter/X thread writer.
-Topic: ${inputs.topic || 'Productivity'}
+      return `Act as a viral Twitter/X thread master.
+Topic: ${inputs.topic || 'marketing shortcuts'}
 Style: ${inputs.style || 'Listicle / Breakdown'}
 
-Write an engaging 5-tweet thread. Each tweet should be separated by "--- Tweet [N] ---". Make Tweet 1 a powerful hook that stops the scroll.`;
+Write a 5-tweet thread about "${inputs.topic}". Separate tweets with "--- Tweet [N] ---". Make Tweet 1 a scroll-stopping hook.`;
 
     case 'seo':
-      return `Act as a senior SEO Specialist ranking #1 on Google.
-Keyword/Topic: ${inputs.topic || 'Free AI Tools'}
+      return `Act as a senior SEO Specialist.
+Topic/Keyword: ${inputs.topic || 'digital tools'}
 Intent: ${inputs.intent || 'Informational'}
 
 Provide:
-1. 3 High-CTR Title Tags (under 60 chars)
+1. 3 High-CTR Title Tags (under 60 chars) for "${inputs.topic}"
 2. 3 Compelling Meta Descriptions (under 155 chars)
-3. Top 5 H2 Heading Ideas for Google AI Overviews ranking.`;
+3. Top 5 H2 Headings for Google AI Search Overviews.`;
 
     case 'email':
-      return `Act as a high-converting Cold Email Copywriter.
-Offer: ${inputs.offer || 'Free audit'}
-Target Role: ${inputs.target || 'CMO / Founder'}
+      return `Act as a high-converting Cold Email Strategist.
+Offer: ${inputs.offer || 'consulting audit'}
+Target: ${inputs.target || 'Marketing Director'}
 Angle: ${inputs.angle || 'Curiosity'}
 
-Provide:
-1. 5 High-Open Subject Lines (Scored 0-100)
-2. A 3-sentence personalized Cold Email Body
-3. A low-friction Call-to-Action.`;
+Provide 5 scored Subject Lines + a high-converting personalized cold email body for "${inputs.offer}".`;
 
     default:
-      return `Generate marketing content for ${inputs.topic || 'business'}.`;
+      return `Generate content for ${inputs.topic || 'business'}.`;
   }
 }
 
 function parseGeminiOutput(toolId, text) {
+  const parts = text.split(/--- Variation \d+ ---|--- Tweet \d+ ---/).filter(p => p.trim().length > 0);
+  
+  if (parts.length >= 2) {
+    return parts.map((part, i) => ({
+      title: `🔥 Variation ${i + 1} (AI Generated)`,
+      content: part.trim()
+    }));
+  }
+
   return [
-    { title: 'AI Variation 1 (Gemini 1.5 Flash)', content: text },
-    { title: 'Alternative Angle', content: `💡 Pro Tip for this output:\nTry testing this angle with your specific target audience for maximum engagement!\n\n${text.substring(0, 300)}...` }
+    { title: '⚡ Gemini 1.5 Flash Output', content: text },
+    { title: '💡 Strategic Recommendation', content: `Tailored Strategy for your query:\n\n${text}` }
   ];
 }
 
 function generateWithLocalEngine(toolId, inputs) {
-  const topic = inputs.topic || 'Building a leverage-driven software tool';
-  const audience = inputs.audience || 'Founders, Creators, & Solopreneurs';
+  const topic = (inputs.topic || inputs.offer || 'Growth & Optimization').trim();
+  const audience = (inputs.audience || inputs.target || 'Founders & Business Leaders').trim();
+  const tone = inputs.tone || inputs.style || inputs.intent || inputs.angle || 'Storytelling / Authentic';
+
+  const capitalizedTopic = topic.charAt(0).toUpperCase() + topic.slice(1);
+  const capitalizedAudience = audience.charAt(0).toUpperCase() + audience.slice(1);
 
   switch (toolId) {
     case 'linkedin':
+      if (tone.includes('Bold') || tone.includes('Controversial')) {
+        return [
+          {
+            title: '🔥 Bold & Controversial Hook',
+            content: `Unpopular opinion about ${capitalizedTopic}:
+
+95% of ${capitalizedAudience} are approaching this completely backwards.
+
+They spend months trying to figure out ${topic} by copying old playbooks from 2020.
+
+Here is the truth nobody wants to admit:
+
+1. Traditional methods for ${topic} are officially dead.
+2. The teams winning right now prioritize speed over perfection.
+3. If your process takes longer than 24 hours, you're losing leverage.
+
+Stop overcomplicating ${topic}. Simplify the offer, eliminate friction, and focus on immediate execution.
+
+Agree or disagree? Let's discuss in the comments 👇`
+          },
+          {
+            title: '⚡ Actionable Breakdown',
+            content: `The 3-step playbook to master ${capitalizedTopic} for ${capitalizedAudience}:
+
+Step 1: Diagnose the Bottleneck
+Most people fail at ${topic} because they solve the wrong problem. Focus exclusively on root cause drivers.
+
+Step 2: Automate Repetitive Work
+Build reusable frameworks and leverage modern software tools to cut execution time in half.
+
+Step 3: Measure & Iterate Daily
+Track 1 core metric: conversion & retention.
+
+If you are a ${capitalizedAudience} working on ${topic}, bookmark this framework for your next sprint 📌`
+          },
+          {
+            title: '📈 Data-Driven Insights',
+            content: `We analyzed results across 500+ projects focused on ${capitalizedTopic}.
+
+Here are the top 3 patterns that separated top performers from the rest:
+
+📊 Key Finding #1:
+Top ${capitalizedAudience} who prioritized ${topic} saw 3.4x faster results than average.
+
+📊 Key Finding #2:
+Frictionless user onboarding increased retention by 42%.
+
+📊 Key Finding #3:
+Consistency outperformed raw ad spend every single time.
+
+Moral of the story? Master ${topic} early and let compounding do the heavy lifting.`
+          }
+        ];
+      }
+
+      // Default Authentic / Storytelling tone for LinkedIn
       return [
         {
-          title: '🔥 The Storytelling Hook (Highest Reach)',
-          content: `I made a decision 6 months ago that changed everything.
+          title: '📖 Authentic Storytelling Hook',
+          content: `I used to think ${capitalizedTopic} was only for big companies with massive budgets.
 
-Everyone told me: "You can't launch a 100% free product and compete with $50/mo SaaS giants."
+Then everything changed.
 
-They were wrong.
+While working directly with ${capitalizedAudience}, I realized something critical:
 
-Here is what happened when we removed all paywalls for ${topic}:
+Success with ${topic} isn't about having more resources—it's about removing unnecessary complexity.
 
-1️⃣ Zero friction = 10x organic word-of-mouth
-2️⃣ Google Search & AI Overviews indexed us in 48 hours
-3️⃣ Community trust skyrocketed because we solved a real pain point
+Here are the 3 big shifts that changed our results:
 
-The lesson?
+1️⃣ Shift #1: Focus on immediate clarity over complex jargon.
+2️⃣ Shift #2: Give maximum value upfront before asking for anything.
+3️⃣ Shift #3: Build systems that scale effortlessly.
 
-Stop building paywalls before you build value. Give away the product, win the trust, and monetize the ecosystem.
+If you're a ${capitalizedAudience} trying to improve ${topic}, start with Shift #1 today.
 
-Repost ♻️ if you agree that software should be accessible to everyone.`
+What's the biggest lesson you've learned about ${topic}?`
         },
         {
-          title: '⚡ The Bold / Counter-Intuitive Hook',
-          content: `99% of people are doing ${topic} completely wrong.
+          title: '💡 Step-by-Step Framework',
+          content: `How to master ${capitalizedTopic} in 2026 (A guide for ${capitalizedAudience}):
 
-Here is the exact framework top 1% creators use for ${audience}:
+Phase 1: Research & Audit
+→ Identify the single biggest pain point in ${topic}.
+→ Benchmark your current performance against top standards.
 
-→ Step 1: Hook them with a specific transformation, not a vague promise.
-→ Step 2: Deliver 80% of the value in the first 3 lines.
-→ Step 3: Keep line lengths under 8 words for mobile readability.
-→ Step 4: End with an open question, not a sales pitch.
+Phase 2: Execution & Systems
+→ Build lightweight workflows that run smoothly.
+→ Focus on consistent delivery over one-off bursts.
 
-Which step are you currently missing in your workflow? Let me know below 👇`
+Phase 3: Scale & Refine
+→ Double down on what works and cut the rest.
+
+Save this post 📌 if you're taking on ${topic} this month!`
         },
         {
-          title: '📊 The Data & Framework Angle',
-          content: `The 4-part playbook for ${topic}:
+          title: '🔥 The 5-Minute Checklist',
+          content: `Quick checklist for ${capitalizedAudience} taking on ${capitalizedTopic}:
 
-1. The Hook: "How to get [X Result] without [Y Pain]"
-2. The Credibility: Show real proof, raw metrics, or verified case studies.
-3. The Breakdown: 3 actionable steps anyone can execute today.
-4. The CTA: Save this post for later.
+✅ Clear goal defined
+✅ Simple process mapped out
+✅ Feedback loop established
+✅ Scalable tools activated
 
-Target Audience: ${audience}
-Saved by 400+ creators this week. Bookmark this for your next post.`
+Mastering ${topic} doesn't require 100 hours. It requires 10 minutes of targeted focus every day.`
         }
       ];
 
     case 'youtube':
       return [
         {
-          title: '🎬 Full Script Breakdown & Timestamps',
-          content: `📌 VIDEO TITLE: ${topic} (The 2026 Guide)
+          title: '🎬 Retention-Locking Script & Hook',
+          content: `📌 VIDEO TITLE: The Ultimate Guide to ${capitalizedTopic} (2026)
 
 ⏱️ 0:00 - THE 5-SECOND HOOK:
-"If you are still struggling with ${topic}, stop everything you are doing right now. In this video, I am revealing the exact system that top creators use to scale 10x faster."
+"If you are a ${capitalizedAudience} trying to figure out ${topic}, stop everything you are doing. In this video, I'm breaking down the exact step-by-step framework you need."
 
-⏱️ 0:30 - THE PROBLEM SETUP:
-"Most people fail at this because they overcomplicate the setup. They buy expensive tools they don't need."
+⏱ filter 0:30 - THE CORE PROBLEM:
+"Why do 90% of people struggle with ${topic}? Because they follow outdated advice. Here is what actually works today..."
 
-⏱️ 2:00 - THE CORE 3-STEP METHOD:
-1. Step 1: Automate the repetitive groundwork.
-2. Step 2: Use intelligent templates to output 80% of the draft.
-3. Step 3: Polish in 5 minutes and publish.
+⏱️ 2:00 - THE 3-STEP BREAKDOWN:
+• Step 1: The Foundation of ${capitalizedTopic}
+• Step 2: Live Demo & Execution
+• Step 3: Pro Tips for ${capitalizedAudience}
 
-⏱️ 7:00 - OUTRO & CALL TO ACTION:
-"If this saved you time, hit subscribe and grab the free template link in the description below!"`
+⏱️ 7:30 - OUTRO & CTA:
+"If this guide on ${topic} was helpful, smash subscribe and check out the links in the description below!"`
         },
         {
-          title: '📝 SEO Optimized YouTube Description',
-          content: `In this video, we break down everything you need to know about ${topic}.
+          title: '📝 YouTube SEO Description & Tags',
+          content: `Everything you need to know about ${capitalizedTopic} explained for ${capitalizedAudience}.
 
-🔗 REFERRED TOOLS & RESOURCES:
-• Try ElevenLabs for instant AI voiceovers: https://elevenlabs.io/?via=viralcraft
-• Edit videos 10x faster with Descript: https://www.descript.com/?via=viralcraft
-• Organize your content calendar with Notion: https://affiliate.notion.so/viralcraft
+🔗 RECOMMENDED CREATOR TOOLS:
+• AI Voiceovers: https://elevenlabs.io/?via=viralcraft
+• Fast Video Editing: https://www.descript.com/?via=viralcraft
+• Workflow & Script Organization: https://affiliate.notion.so/viralcraft
 
 TIMESTAMPS:
 0:00 Intro & High-Retention Hook
-1:15 The Secret Shortcut
-4:30 Step-by-Step Live Demo
-8:00 Final Verdict & Free Checklist
+1:15 The ${capitalizedTopic} Mistake
+4:00 Step-by-Step Tutorial
+7:30 Final Verdict & Key Takeaways
 
-#Marketing #ContentCreation #Automation #ViralTools`
+#${topic.replace(/[^a-zA-Z0-9]/g, '')} #${audience.replace(/[^a-zA-Z0-9]/g, '')} #Growth #Tutorial`
         }
       ];
 
@@ -213,42 +280,40 @@ TIMESTAMPS:
       return [
         {
           title: '🐦 5-Tweet Viral Thread',
-          content: `1/5 Most people spend weeks trying to figure out ${topic}.
+          content: `1/5 Most ${capitalizedAudience} overcomplicate ${capitalizedTopic}.
 
-Here is the 2-minute breakdown that will put you ahead of 95% of creators: 🧵👇
-
----
-
-2/5 The biggest mistake people make:
-
-They focus on vanity metrics instead of core leverage.
-
-If your audience (${audience}) doesn't get immediate value in 3 seconds, they scroll past.
+Here is the 2-minute masterclass to master it today: 🧵👇
 
 ---
 
-3/5 Here is the framework that changes the game:
+2/5 The biggest mistake with ${topic}:
 
-1. Simplicity over complexity.
-2. Frictionless delivery.
-3. High-utility outputs.
+Trying to do everything manually instead of building a repeatable system.
 
-Rule of thumb: Make the product 100% free and build trust first.
+If you don't automate or streamline ${topic}, you run out of bandwidth.
 
 ---
 
-4/5 The results speak for themselves:
-• 10x faster search indexing on Google
-• Massive organic word-of-mouth
-• Higher conversion on native partner tools
+3/5 Here is the 3-step execution framework:
+
+1. Identify the high-impact lever in ${topic}.
+2. Eliminate redundant friction points.
+3. Track result metrics daily.
+
+---
+
+4/5 The results when you execute this properly:
+• 3x faster turnaround times
+• Higher satisfaction among ${capitalizedAudience}
+• Consistent growth without burnout
 
 ---
 
 5/5 That's a wrap!
 
-If you found this thread valuable:
-1. Follow @ViralCraftApp for daily breakdown threads.
-2. RT the first tweet below to share it with your network!`
+If you found this thread on ${topic} valuable:
+1. Follow for more insights on ${capitalizedTopic}.
+2. RT the first tweet to help other ${capitalizedAudience}!`
         }
       ];
 
@@ -256,21 +321,21 @@ If you found this thread valuable:
       return [
         {
           title: '🎯 Google Search & AI Overviews Package',
-          content: `🔍 TARGET KEYWORD / TOPIC: ${topic}
+          content: `🔍 TARGET KEYWORD / TOPIC: ${capitalizedTopic}
 
-📌 HIGH-CTR TITLE TAGS (Under 60 Characters):
-1. ${topic} (2026 Free Suite & Instant Tools)
-2. Free ${topic}: No Credit Card Required [100% Free]
-3. How to Master ${topic} in 5 Minutes (Step-by-Step)
+📌 HIGH-CTR TITLE TAGS (Google Snippet Ready):
+1. Free ${capitalizedTopic} Guide & Tools (2026 Edition)
+2. How to Master ${capitalizedTopic} for ${capitalizedAudience} [Step-by-Step]
+3. Top ${capitalizedTopic} Frameworks That Actually Work
 
-📝 META DESCRIPTIONS (Google Snippet Ready - Under 155 Chars):
-1. "Discover the #1 free tool for ${topic}. Generate viral hooks, video scripts, and SEO content instantly with zero paywalls. Try it now!"
-2. "Looking for free ${topic}? Access our 100% free suite built for creators and marketers. No credit card required, ever."
+📝 META DESCRIPTIONS (Under 155 Characters):
+1. "Looking for the ultimate guide to ${topic}? Discover fast, actionable strategies tailored for ${audience}. Access free tools today!"
+2. "Master ${topic} with our free high-converting templates. Built specifically for ${audience} seeking rapid growth."
 
 💡 HIGH-RANKING H2 HEADINGS FOR GOOGLE AI OVERVIEWS:
-• What is ${topic} and why does it matter in 2026?
-• Step-by-Step Guide to Automating ${topic}
-• Top 5 Free Tools vs Paid Alternatives`
+• What is ${capitalizedTopic} and how does it work?
+• Top 3 Mistakes to Avoid in ${capitalizedTopic}
+• How ${capitalizedAudience} Can Automate ${capitalizedTopic}`
         }
       ];
 
@@ -278,23 +343,23 @@ If you found this thread valuable:
       return [
         {
           title: '📧 High-Open Cold Email Package',
-          content: `🎯 TARGET: ${inputs.target || 'CMO / Marketing Director'}
-💡 OFFER: ${inputs.offer || 'Free audit'}
+          content: `🎯 TARGET ROLE: ${capitalizedAudience}
+💡 OFFER / SUBJECT: ${capitalizedTopic}
 
-🔥 SUBJECT LINES & OPEN RATE PREDICTIONS:
-1. Quick question about ${topic} [Score: 94/100]
-2. Loved your recent post + quick idea for ${inputs.target || 'your team'} [Score: 91/100]
-3. 2 conversion leaks I noticed on your landing page [Score: 96/100]
+🔥 SUBJECT LINES & OPEN RATE SCORES:
+1. Quick question regarding ${topic} [Score: 95/100]
+2. 2 ideas for ${capitalizedAudience} tackling ${topic} [Score: 92/100]
+3. Fast question about ${capitalizedTopic} at your company [Score: 96/100]
 
-✉️ COLD EMAIL BODY TEMPLATE:
+✉️ COLD EMAIL BODY:
 
 Hi {{First_Name}},
 
-Notice you are scaling marketing for {{Company_Name}} and thought of this idea.
+Noticed your team is working on ${topic} and thought of a quick suggestion for ${audience}.
 
-We built a 100% free tool that solves ${topic} in under 60 seconds without requiring any credit card or software setup.
+We created a simple framework that cuts execution time on ${topic} by 50% without adding headcount or expensive software.
 
-Would it be insane if I sent over a 45-second loom video showing how your team can test it today?
+Would it be crazy if I sent over a 30-second summary explaining how it works?
 
 Best,
 [Your Name]
@@ -303,6 +368,6 @@ ViralCraft Free Suite`
       ];
 
     default:
-      return [{ title: 'Output', content: 'Generated content ready.' }];
+      return [{ title: 'Output', content: `Tailored content for ${topic}.` }];
   }
 }
